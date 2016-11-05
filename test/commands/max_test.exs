@@ -6,9 +6,8 @@ defmodule Integration.MaxTest do
     memory_accum(inv_id, %{"a" => 1})
     memory_accum(inv_id, %{"a" => 3})
 
-    response = new_req(invocation_id: inv_id, cog_env: %{"a" => 2})
-               |> send_req()
-               |> unwrap()
+    {:ok, response} = new_req(invocation_id: inv_id, cog_env: %{"a" => 2})
+    |> send_req()
 
     assert(response == %{a: 3})
   end
@@ -18,9 +17,8 @@ defmodule Integration.MaxTest do
     memory_accum(inv_id, %{"a" => 1})
     memory_accum(inv_id, %{"a" => 3})
 
-    response = new_req(invocation_id: inv_id, cog_env: %{"a" => 2}, args: ["a"])
-               |> send_req()
-               |> unwrap()
+    {:ok, response} = new_req(invocation_id: inv_id, cog_env: %{"a" => 2}, args: ["a"])
+    |> send_req()
 
     assert(response == %{a: 3})
   end
@@ -30,9 +28,8 @@ defmodule Integration.MaxTest do
     memory_accum(inv_id, %{"a" => %{"b" => 1}})
     memory_accum(inv_id, %{"a" => %{"b" => 3}})
 
-    response = new_req(invocation_id: inv_id, cog_env: %{"a" => %{"b" => 2}}, args: ["a.b"])
-               |> send_req()
-               |> unwrap()
+    {:ok, response} = new_req(invocation_id: inv_id, cog_env: %{"a" => %{"b" => 2}}, args: ["a.b"])
+    |> send_req()
 
     assert(response == %{a: %{b: 3}})
   end
@@ -42,9 +39,8 @@ defmodule Integration.MaxTest do
     memory_accum(inv_id, %{"a" => %{"b" => 1}})
     memory_accum(inv_id, %{"a" => %{"b" => 3}})
 
-    error = new_req(invocation_id: inv_id, cog_env: %{"a" => %{"b" => 2}}, args: ["c.d"])
-            |> send_req()
-            |> unwrap_error()
+    {:error, error} = new_req(invocation_id: inv_id, cog_env: %{"a" => %{"b" => 2}}, args: ["c.d"])
+    |> send_req()
 
     assert(error == "The path provided does not exist")
   end
