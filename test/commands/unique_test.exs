@@ -6,9 +6,8 @@ defmodule Cog.Test.Commands.UniqueTest do
     memory_accum(inv_id, %{"a" => 1})
     memory_accum(inv_id, %{"a" => 3})
 
-    response = new_req(cog_env: %{"a" => 1}, invocation_id: inv_id)
-               |> send_req()
-               |> unwrap()
+    {:ok, response} = new_req(cog_env: %{"a" => 1}, invocation_id: inv_id)
+    |> send_req()
 
     assert([%{a: 1}, %{a: 3}] == response)
   end
