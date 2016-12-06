@@ -35,15 +35,47 @@ defmodule Cog.Test.Support.HipChatClient do
     [hipchat_org|_] = String.split(user_name, "_", parts: 2)
     case Connection.start_link(opts) do
       {:ok, conn} ->
-        Connection.send(conn, Stanza.presence)
-        Connection.send(conn, Stanza.join("#{hipchat_org}_ci_bot_testing@conf.hipchat.com", nickname))
-        Connection.send(conn, Stanza.join("#{hipchat_org}_ci_bot_redirect_tests@conf.hipchat.com", nickname))
-        Connection.send(conn, Stanza.join("#{hipchat_org}_private_ci_testing@conf.hipchat.com", nickname))
+        :ok = Connection.send(conn, Stanza.presence)
+        wait_for_presence()
+
+        rooms = [
+          "#{hipchat_org}_ci_bot_testing@conf.hipchat.com",
+          "#{hipchat_org}_ci_bot_redirect_tests@conf.hipchat.com",
+          "#{hipchat_org}_private_ci_testing@conf.hipchat.com"
+        ]
+        # Join the proper rooms
+        Enum.each(rooms, &Connection.send(conn, Stanza.join(&1, nickname)))
+
+        # Wait to receive a reply from joining
+        Enum.each(rooms, &wait_for_join(&1))
+
         {:ok, %__MODULE__{conn: conn, waiters: %{}, rooms: Rooms.new(@api_root, api_token),
                           users: %Users{}, hipchat_org: hipchat_org,
                           mention_name: nickname}}
       error ->
         error
+    end
+  end
+
+  defp wait_for_presence(stanzas \\ 2) do
+    receive do
+      {:stanza, %Stanza.Presence{}} ->
+        if stanzas > 0 do
+          wait_for_presence(stanzas - 1)
+        else
+          :ok
+        end
+    after
+        @default_timeout -> raise "Error: Presence check failed"
+    end
+  end
+
+  defp wait_for_join(full) do
+    receive do
+      {:stanza, %Stanza.Message{body: "", from: %Romeo.JID{full: ^full}}} ->
+        :ok
+    after
+        @default_timeout -> raise "Error: Timeout waiting for bot to join room"
     end
   end
 
