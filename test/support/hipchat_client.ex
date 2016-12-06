@@ -38,16 +38,18 @@ defmodule Cog.Test.Support.HipChatClient do
         :ok = Connection.send(conn, Stanza.presence)
         wait_for_presence()
 
+        # Rooms that we want to join
         rooms = [
           "#{hipchat_org}_ci_bot_testing@conf.hipchat.com",
           "#{hipchat_org}_ci_bot_redirect_tests@conf.hipchat.com",
           "#{hipchat_org}_private_ci_testing@conf.hipchat.com"
         ]
-        # Join the proper rooms
-        Enum.each(rooms, &Connection.send(conn, Stanza.join(&1, nickname)))
-
-        # Wait to receive a reply from joining
-        Enum.each(rooms, &wait_for_join(&1))
+        Enum.each(rooms, fn(room) ->
+          # Send a message to join the room
+          :ok = Connection.send(conn, Stanza.join(room, nickname))
+          # Wait for a response before continuing
+          :ok = wait_for_join(room)
+        end)
 
         {:ok, %__MODULE__{conn: conn, waiters: %{}, rooms: Rooms.new(@api_root, api_token),
                           users: %Users{}, hipchat_org: hipchat_org,
@@ -57,14 +59,13 @@ defmodule Cog.Test.Support.HipChatClient do
     end
   end
 
-  defp wait_for_presence(stanzas \\ 2) do
+  defp wait_for_presence(stanzas) do
     receive do
-      {:stanza, %Stanza.Presence{}} ->
-        if stanzas > 0 do
-          wait_for_presence(stanzas - 1)
-        else
-          :ok
-        end
+      # TODO: We actually receive multiple presence responses back from HipChat
+      # For now this seems to work but we do need to do some exploration on exactly
+      # what is going on here.
+      {:stanza, %Stanza.Presence{}=message} ->
+        :ok
     after
         @default_timeout -> raise "Error: Presence check failed"
     end
